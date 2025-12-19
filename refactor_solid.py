@@ -8,26 +8,6 @@ class Order:
     total_price: float
     status: str = "open"
 
-# === KODE BURUK (SEBELUM REFACTOR) ===
-class OrderManager:  # Melanggar SRP, OCP, DIP
-    def process_checkout(self, order: Order, payment_method: str):
-        print(f"Memulai checkout untuk {order.customer_name}...")
-
-        # LOGIKA PEMBAYARAN (Pelanggaran OCP/DIP)
-        if payment_method == "credit_card":
-            # Logika detail implementasi hardcoded di sini
-            print("Processing Credit Card...")
-        elif payment_method == "bank_transfer":
-            # Logika detail implementasi hardcoded di sini
-            print("Processing Bank Transfer...")
-        else:
-            print("Metode tidak valid.")
-            return False
-
-        # LOGIKA NOTIFIKASI (Pelanggaran SRP)
-        print(f"Mengirim notifikasi ke {order.customer_name}...")
-        order.status = "paid"
-        return True
 
 # --- ABSTRAKSI (Kontrak untuk OCP/DIP) ---
 class IPaymentProcessor(ABC):
@@ -57,14 +37,31 @@ class EmailNotifier(INotificationService):
 
 
 # --- KELAS KOORDINATOR (SRP & DIP) ---
-class CheckoutService:  # Tanggung jawab tunggal: Mengkoordinasi checkout
+class CheckoutService:  
+    """
+    Kelas high-level untuk mengkoordinasi proses transaksi pembayaran. 
+    
+    Kelas ini memisahkan logika pembayaran dan notifikasi (memenuhi SRP). 
+    """
     def __init__(self, payment_processor: IPaymentProcessor, notifier: INotificationService):
-        # Dependency Injection (DIP): Bergantung pada Abstraksi, bukan Konkrit
+        """
+        Menginisialisasi CheckoutService dengan dependensi yang diperlukan. 
+
+        Args:
+            payment_processor (IPaymentProcessor): Implementasi interface pembayaran. 
+            notifier (INotificationService): Implementasi interface notifikasi. 
+        """
         self.payment_processor = payment_processor
         self.notifier = notifier
 
     def run_checkout(self, order: Order):
-        payment_success = self.payment_processor.process(order)  # Delegasi 1
+        """
+        Menjalankan proses checkout dan memvalidasi pembayaran. [cite: 266]
+
+        Args:
+            order (Order): Objek pesanan yang akan diproses.
+        """
+        payment_success = self.payment_processor.process(order)  
 
         if payment_success:
             order.status = "paid"
