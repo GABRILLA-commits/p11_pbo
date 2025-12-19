@@ -1,16 +1,19 @@
+"""
+Sistem Validasi Registrasi Mahasiswa (Praktikum 12).
 
-class ValidatorManagerOld:
-    def validate(self, sks, has_prerequisite):
-        if sks > 24:
-            return "Validasi gagal: SKS melebihi batas"
-        elif not has_prerequisite:
-            return "Validasi gagal: Prasyarat belum terpenuhi"
-        else:
-            return "Registrasi mahasiswa valid"
+Program ini melanjutkan hasil refactoring Praktikum 11
+dengan menambahkan Logging untuk mencatat proses runtime.
+"""
 
-
-
+import logging
 from abc import ABC, abstractmethod
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 class ValidationRule(ABC):
     """
@@ -47,7 +50,10 @@ class SKSValidation(ValidationRule):
             str | None: Pesan error atau None.
         """
         if data["sks"] > 24:
+            logging.warning("Validasi SKS gagal")
             return "Validasi gagal: SKS melebihi batas"
+
+        logging.info("Validasi SKS berhasil")
         return None
 
 
@@ -55,6 +61,7 @@ class PrerequisiteValidation(ValidationRule):
     """
     Validasi mata kuliah prasyarat.
     """
+
     def validate(self, data):
         """
         Memeriksa apakah prasyarat terpenuhi.
@@ -66,70 +73,59 @@ class PrerequisiteValidation(ValidationRule):
             str | None: Pesan error atau None.
         """
         if not data["has_prerequisite"]:
+            logging.warning("Validasi prasyarat gagal")
             return "Validasi gagal: Prasyarat belum terpenuhi"
+
+        logging.info("Validasi prasyarat berhasil")
         return None
 
 
-class IPKValidation(ValidationRule):
+class RegistrationService:
     """
-    Manager utama untuk menjalankan seluruh aturan validasi.
-    """
-    def validate(self, data):
-        if data["ipk"] < 2.75:
-            return "Validasi gagal: IPK tidak memenuhi syarat"
-        return None
-
-
-class ValidatorManager:
-    """
-    Manager utama untuk menjalankan seluruh aturan validasi.
+    Service utama untuk mengelola proses validasi registrasi mahasiswa.
     """
 
-    def __init__(self, validations):
+    def __init__(self, rules):
         """
-        Inisialisasi validator manager.
+        Inisialisasi service validasi.
 
         Args:
             rules (list[ValidationRule]): Daftar aturan validasi.
         """
-        self.validations = validations
+        self.rules = rules
 
-    def validate(self, data):
+    def validate_registration(self, data):
         """
-        Menjalankan proses validasi registrasi mahasiswa.
+        Menjalankan seluruh aturan validasi registrasi.
 
         Args:
             data (dict): Data mahasiswa.
 
         Returns:
-            str: Hasil akhir validasi.
+            str: Hasil akhir registrasi.
         """
-        for rule in self.validations:
+        logging.info("Proses validasi registrasi dimulai")
+
+        for rule in self.rules:
             result = rule.validate(data)
             if result is not None:
+                logging.error("Registrasi mahasiswa ditolak")
                 return result
+
+        logging.info("Registrasi mahasiswa berhasil")
         return "Registrasi mahasiswa valid"
 
 
-
 if __name__ == "__main__":
-
-    print("=== SEBELUM REFACTORING ===")
-    old_validator = ValidatorManagerOld()
-    print(old_validator.validate(26, True))
-
-    print("\n=== SESUDAH REFACTORING ===")
     data_mahasiswa = {
         "sks": 20,
-        "has_prerequisite": True,
-        "ipk": 3.1
+        "has_prerequisite": True
     }
 
-    validations = [
+    rules = [
         SKSValidation(),
-        PrerequisiteValidation(),
-        IPKValidation()   # aturan baru (OCP)
+        PrerequisiteValidation()
     ]
 
-    validator = ValidatorManager(validations)
-    print(validator.validate(data_mahasiswa))
+    service = RegistrationService(rules)
+    print(service.validate_registration(data_mahasiswa))
